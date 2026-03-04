@@ -157,3 +157,36 @@ async def list_agents():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+
+# ============ 回测API ============
+from src.backtest.backtest_engine import BacktestEngine
+
+@app.post("/backtest/run")
+async def run_backtest(request: AnalysisRequest):
+    """
+    运行回测分析
+    """
+    try:
+        engine = BacktestEngine(initial_capital=100000.0)
+        
+        result = await engine.run(
+            codes=request.codes,
+            start_date=request.start_date,
+            end_date=request.end_date
+        )
+        
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/backtest/stats/{code}")
+async def get_backtest_stats(code: str, start_date: str, end_date: str):
+    """
+    获取某只股票的回测统计
+    """
+    try:
+        engine = BacktestEngine()
+        result = await engine.run([code], start_date, end_date)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
