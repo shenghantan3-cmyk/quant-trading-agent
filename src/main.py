@@ -168,3 +168,62 @@ async def list_agents():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+
+# ============ LLM分析API ============
+from src.agents.enhanced_decision_agent import EnhancedDecisionAgent
+from src.llm.kimi_llm import KimiLLM
+
+enhanced_agent = EnhancedDecisionAgent(use_llm=True)
+kimi = KimiLLM()
+
+@app.post("/analysis/signals-with-llm")
+async def generate_signals_with_llm(request: AnalysisRequest):
+    """完整分析 + LLM智能评论"""
+    try:
+        # 获取数据
+        data_result = await data_agent.execute({
+            "codes": request.codes,
+            "start_date": request.start_date,
+            "end_date": request.end_date
+        })
+        
+        if data_result["status"] != "success":
+            raise Exception("Failed to fetch data")
+        
+        # 计算因子
+        factor_result = await factor_agent.execute({
+            "data": data_result["data"],
+            "factors": request.factors
+        })
+        
+        if factor_result["status"] != "success":
+            raise Exception("Failed to calculate factors")
+        
+        # 生成信号（带LLM分析）
+        signal_result = await enhanced_agent.execute({
+            "factors": factor_result["factor_values"],
+            "threshold": request.threshold,
+            "use_llm_analysis": True
+        })
+        
+        return {
+            "status": "success",
+            "pipeline": "DATA -> FACTORS -> SIGNALS + LLM_ANALYSIS",
+            "data_count": len(data_result.get("data", [])),
+            "signals": signal_result.get("signals", []),
+            "buy_count": len(signal_result.get("buy_signals", [])),
+            "sell_count": len(signal_result.get("sell_signals", [])),
+            "llm_analysis": signal_result.get("llm_analysis"),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/llm/analyze-signals")
+async def llm_analyze_signals(signals: List[Dict[str, Any]]):
+    """直接用LLM分析交易信号"""
+    try:
+        result = kimi.analyze_signals(signals)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

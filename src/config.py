@@ -14,8 +14,9 @@ class Settings(BaseSettings):
     redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379")
     mongodb_url: str = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
     
-    # LangChain配置
-    openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
+    # LLM配置 - Moonshot Kimi
+    moonshot_api_key: str = os.getenv("MOONSHOT_API_KEY", "")
+    moonshot_model: str = os.getenv("MOONSHOT_MODEL", "moonshot-v1-8k")
     
     class Config:
         env_file = ".env"
